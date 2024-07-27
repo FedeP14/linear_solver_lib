@@ -176,17 +176,20 @@ func main() {
 	// tol è un vettore di tolleranze
 	tol := []float64{1e-4, 1e-6, 1e-8, 1e-10}
 
-	fmt.Print("Seleziona la tolleranza:")
-	for i, t := range tol {
-		fmt.Printf("\n%d. %e", i+1, t)
+	fmt.Print("Seleziona la tolleranza:\n")
+	for t := range tol {
+		fmt.Printf(" %d. %e", t+1, tol[t])
+		fmt.Println()
 	}
 
+	// L'utente sceglie la tolleranza
 	tolIndexInput, _ := reader.ReadString('\n')
 	tolIndex, err := strconv.Atoi(strings.TrimSpace(tolIndexInput))
 	if err != nil || tolIndex < 1 || tolIndex > len(tol) {
 		fmt.Println("Indice non valido, per favore riprova.")
 		return
 	}
+	tolIndex--
 	maxIter := 20000
 
 	// Metodo di Jacobi
