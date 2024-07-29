@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -60,6 +61,7 @@ func gaussSeidel(A *mat.Dense, b *mat.VecDense, x_approx *mat.VecDense, tol floa
 	return x, maxIter, false
 }
 
+// Metodo del gradiente
 func gradientMethod(A *mat.Dense, b *mat.VecDense, x_approx *mat.VecDense, tol float64, maxIter int) (*mat.VecDense, int, bool) {
 	n, _ := A.Dims()
 	x := mat.NewVecDense(n, nil)
@@ -92,33 +94,34 @@ func gradientMethod(A *mat.Dense, b *mat.VecDense, x_approx *mat.VecDense, tol f
 	return x, maxIter, false
 }
 
+// Metodo del gradiente coniugato
 func conjugateGradient(A *mat.Dense, b *mat.VecDense, x_approx *mat.VecDense, tol float64, maxIter int) (*mat.VecDense, int, bool) {
 	n, _ := A.Dims()
 	x := mat.NewVecDense(n, nil)
 	x.CloneFromVec(x_approx)
 	r := mat.NewVecDense(n, nil)
 	temp := mat.NewVecDense(n, nil)
-
 	temp.MulVec(A, x)
 	r.SubVec(b, temp)
 	p := mat.NewVecDense(n, nil)
 	p.CloneFromVec(r)
+	rsold := mat.Dot(r, r)
 
 	for k := 0; k < maxIter; k++ {
-		temp.MulVec(A, p)
-		alpha := mat.Dot(r, r) / mat.Dot(p, temp)
+		Ap := mat.NewVecDense(n, nil)
+		Ap.MulVec(A, p)
+		alpha := rsold / mat.Dot(p, Ap)
 		x.AddScaledVec(x, alpha, p)
-
-		temp.MulVec(A, p)
-		r.AddScaledVec(r, -alpha, temp)
-
-		if mat.Norm(r, 2) < tol {
+		scaledVec := mat.NewVecDense(n, nil)
+		scaledVec.ScaleVec(alpha, Ap)
+		r.SubVec(r, scaledVec)
+		rsnew := mat.Dot(r, r)
+		if math.Sqrt(rsnew) < tol {
 			return x, k + 1, true
 		}
-
-		beta := mat.Dot(r, r) / mat.Dot(p, p)
-		p.ScaleVec(beta, p)
+		p.ScaleVec(rsnew/rsold, p)
 		p.AddVec(r, p)
+		rsold = rsnew
 	}
 
 	return x, maxIter, false
@@ -132,6 +135,58 @@ func convergence(A *mat.Dense, x *mat.VecDense, b *mat.VecDense, tol float64) bo
 	normB := mat.Norm(b, 2)
 	normR := mat.Norm(&r, 2)
 	return normR/normB < tol
+}
+
+// Funzione per calcolare l'errore relativo
+func calculateRelativeError(x *mat.VecDense, x_solution *mat.VecDense) float64 {
+	var diff mat.VecDense
+	diff.SubVec(x, x_solution)
+	return mat.Norm(&diff, 2) / mat.Norm(x_solution, 2)
+}
+
+// Funzione per leggere la matrice da un file
+func readMatrixFromFile(filename string) (*mat.Dense, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	var rows, cols int
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "%") {
+			continue
+		}
+		parts := strings.Fields(line)
+		if len(parts) == 3 {
+			rows, _ = strconv.Atoi(parts[0])
+			cols, _ = strconv.Atoi(parts[1])
+			break
+		}
+	}
+
+	matrix := mat.NewDense(rows, cols, nil)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "%") {
+			continue
+		}
+		parts := strings.Fields(line)
+		if len(parts) == 3 {
+			row, _ := strconv.Atoi(parts[0])
+			col, _ := strconv.Atoi(parts[1])
+			val, _ := strconv.ParseFloat(parts[2], 64)
+			matrix.Set(row-1, col-1, val)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return matrix, nil
 }
 
 func main() {
@@ -190,97 +245,62 @@ func main() {
 		return
 	}
 	tolIndex--
+	fmt.Println("Tolleranza selezionata: ", tol[tolIndex])
 	maxIter := 20000
 
 	// Metodo di Jacobi
+
+	fmt.Println()
 	fmt.Println("Metodo di Jacobi:")
 	start := time.Now()
-	_, iterations, converged := jacobi(matrix, b, x_approx, tol[tolIndex], maxIter)
+	x_jacobi, iterations, converged := jacobi(matrix, b, x_approx, tol[tolIndex], maxIter)
 	elapsed := time.Since(start)
 	if converged {
 		fmt.Printf("Tempo impiegato: %v\n", elapsed)
 		fmt.Printf("Numero di iterazioni: %d\n", iterations)
+		fmt.Printf("Errore relativo: %e\n", calculateRelativeError(x_jacobi, x_solution))
 	} else {
 		fmt.Println("Jacobi non ha converguto")
 	}
 
+	fmt.Println()
 	// Metodo di Gauss-Seidel
 	fmt.Println("Metodo di Gauss-Seidel:")
 	start = time.Now()
-	_, iterations, converged = gaussSeidel(matrix, b, x_approx, tol[tolIndex], maxIter)
+	x_gs, iterations, converged := gaussSeidel(matrix, b, x_approx, tol[tolIndex], maxIter)
 	elapsed = time.Since(start)
 	if converged {
 		fmt.Printf("Tempo impiegato: %v\n", elapsed)
 		fmt.Printf("Numero di iterazioni: %d\n", iterations)
+		fmt.Printf("Errore relativo: %e\n", calculateRelativeError(x_gs, x_solution))
 	} else {
 		fmt.Println("Gauss-Seidel non ha converguto")
 	}
 
-	// Metodo del gradiente
+	fmt.Println()
 	fmt.Println("Metodo del gradiente:")
 	start = time.Now()
-	_, iterations, converged = gradientMethod(matrix, b, x_approx, tol[tolIndex], maxIter)
+	x_gradient, iterations, converged := gradientMethod(matrix, b, x_approx, tol[tolIndex], maxIter)
 	elapsed = time.Since(start)
 	if converged {
 		fmt.Printf("Tempo impiegato: %v\n", elapsed)
 		fmt.Printf("Numero di iterazioni: %d\n", iterations)
+		fmt.Printf("Errore relativo: %e\n", calculateRelativeError(x_gradient, x_solution))
 	} else {
 		fmt.Println("Il metodo del gradiente non ha converguto")
 	}
 
+	fmt.Println()
 	// Metodo del gradiente coniugato
 	fmt.Println("Metodo del gradiente coniugato:")
 	start = time.Now()
-	_, iterations, converged = conjugateGradient(matrix, b, x_approx, tol[tolIndex], maxIter)
+	x_cg, iterations, converged := conjugateGradient(matrix, b, x_approx, tol[tolIndex], maxIter)
 	elapsed = time.Since(start)
 	if converged {
 		fmt.Printf("Tempo impiegato: %v\n", elapsed)
 		fmt.Printf("Numero di iterazioni: %d\n", iterations)
+		fmt.Printf("Errore relativo: %e\n", calculateRelativeError(x_cg, x_solution))
 	} else {
 		fmt.Println("Il metodo del gradiente coniugato non ha converguto")
 	}
-}
-
-func readMatrixFromFile(filename string) (*mat.Dense, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	var rows, cols int
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(line, "%") {
-			continue
-		}
-		parts := strings.Fields(line)
-		if len(parts) == 3 {
-			rows, _ = strconv.Atoi(parts[0])
-			cols, _ = strconv.Atoi(parts[1])
-			break
-		}
-	}
-
-	matrix := mat.NewDense(rows, cols, nil)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(line, "%") {
-			continue
-		}
-		parts := strings.Fields(line)
-		if len(parts) == 3 {
-			row, _ := strconv.Atoi(parts[0])
-			col, _ := strconv.Atoi(parts[1])
-			val, _ := strconv.ParseFloat(parts[2], 64)
-			matrix.Set(row-1, col-1, val)
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-
-	return matrix, nil
 }
