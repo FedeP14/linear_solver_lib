@@ -16,17 +16,17 @@ func main() {
 	matrixPath := "resources"
 	matrixFile, err := menu.DisplayMatrices(matrixPath)
 	if err != nil {
-		fmt.Println("Errore:", err)
+		fmt.Println("Error:", err)
 		return
 	}
 
 	matrix, err := utils.ReadMatrixFromFile(matrixPath + "/" + matrixFile)
 	if err != nil {
-		fmt.Println("Errore nella lettura della matrice", err)
+		fmt.Println("Error reading the matrix", err)
 		return
 	}
 
-	fmt.Print("Matrice A dimensione: " + fmt.Sprint(matrix.Dims()) + "\n")
+	fmt.Print("Matrix A size: " + fmt.Sprint(matrix.Dims()) + "\n")
 	n, _ := matrix.Dims()
 	x_solution := mat.NewVecDense(n, nil)
 	for i := 0; i < n; i++ {
@@ -39,62 +39,62 @@ func main() {
 
 	tol, err := menu.SelectTolerance(params.Tolerances)
 	if err != nil {
-		fmt.Println("Errore:", err)
+		fmt.Println("Error:", err)
 		return
 	}
 
-	// Metodo di Jacobi
+	// Jacobi Method
 	fmt.Println()
-	fmt.Println("Metodo di Jacobi:")
+	fmt.Println("Jacobi Method:")
 	start := time.Now()
 	x_jacobi, iterations, converged := solver.Jacobi(matrix, b, x_approx, tol, params.MaxIter)
 	elapsed := time.Since(start)
 	if converged {
-		fmt.Printf("Tempo impiegato: %v\n", elapsed)
-		fmt.Printf("Numero di iterazioni: %d\n", iterations)
-		fmt.Printf("Errore relativo: %e\n", utils.CalculateRelativeError(x_jacobi, x_solution))
+		fmt.Printf("Time taken: %v\n", elapsed)
+		fmt.Printf("Number of iterations: %d\n", iterations)
+		fmt.Printf("Relative error: %e\n", utils.CalculateRelativeError(x_jacobi, x_solution))
 	} else {
-		fmt.Println("Jacobi non ha converguto")
+		fmt.Println("Jacobi did not converge")
 	}
 
 	fmt.Println()
-	// Metodo di Gauss-Seidel
-	fmt.Println("Metodo di Gauss-Seidel:")
+	// Gauss-Seidel Method
+	fmt.Println("Gauss-Seidel Method:")
 	start = time.Now()
 	x_gs, iterations, converged := solver.GaussSeidel(matrix, b, x_approx, tol, params.MaxIter)
 	elapsed = time.Since(start)
 	if converged {
-		fmt.Printf("Tempo impiegato: %v\n", elapsed)
-		fmt.Printf("Numero di iterazioni: %d\n", iterations)
-		fmt.Printf("Errore relativo: %e\n", utils.CalculateRelativeError(x_gs, x_solution))
+		fmt.Printf("Time taken: %v\n", elapsed)
+		fmt.Printf("Number of iterations: %d\n", iterations)
+		fmt.Printf("Relative error: %e\n", utils.CalculateRelativeError(x_gs, x_solution))
 	} else {
-		fmt.Println("Gauss-Seidel non ha converguto")
+		fmt.Println("Gauss-Seidel did not converge")
 	}
 
 	fmt.Println()
-	fmt.Println("Metodo del gradiente:")
+	fmt.Println("Gradient Method:")
 	start = time.Now()
 	x_gradient, iterations, converged := solver.GradientMethod(matrix, b, x_approx, tol, params.MaxIter)
 	elapsed = time.Since(start)
 	if converged {
-		fmt.Printf("Tempo impiegato: %v\n", elapsed)
-		fmt.Printf("Numero di iterazioni: %d\n", iterations)
-		fmt.Printf("Errore relativo: %e\n", utils.CalculateRelativeError(x_gradient, x_solution))
+		fmt.Printf("Time taken: %v\n", elapsed)
+		fmt.Printf("Number of iterations: %d\n", iterations)
+		fmt.Printf("Relative error: %e\n", utils.CalculateRelativeError(x_gradient, x_solution))
 	} else {
-		fmt.Println("Il metodo del gradiente non ha converguto")
+		fmt.Println("Gradient method did not converge")
 	}
 
 	fmt.Println()
-	// Metodo del gradiente coniugato
-	fmt.Println("Metodo del gradiente coniugato:")
+	// Conjugate Gradient Method
+	fmt.Println("Conjugate Gradient Method:")
 	start = time.Now()
 	x_cg, iterations, converged := solver.ConjugateGradient(matrix, b, x_approx, tol, params.MaxIter)
 	elapsed = time.Since(start)
 	if converged {
-		fmt.Printf("Tempo impiegato: %v\n", elapsed)
-		fmt.Printf("Numero di iterazioni: %d\n", iterations)
-		fmt.Printf("Errore relativo: %e\n", utils.CalculateRelativeError(x_cg, x_solution))
+		fmt.Printf("Time taken: %v\n", elapsed)
+		fmt.Printf("Number of iterations: %d\n", iterations)
+		fmt.Printf("Relative error: %e\n", utils.CalculateRelativeError(x_cg, x_solution))
 	} else {
-		fmt.Println("Il metodo del gradiente coniugato non ha converguto")
+		fmt.Println("Conjugate Gradient method did not converge")
 	}
 }
